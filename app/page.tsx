@@ -67,6 +67,8 @@ export default function HomePage() {
           <div className="rounded-lg border p-4">
             <SearchFilterBar showType type={type} onTypeChange={setType} filters={filters} onChange={setFilters} />
           </div>
+          {/* Minimal container for Firestore realtime updates (optional) */}
+          <div id="items-list" className="mt-4" />
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             {filtered.length === 0 && <p className="text-sm text-muted-foreground">No items match your search.</p>}
             {filtered.map((item) => (

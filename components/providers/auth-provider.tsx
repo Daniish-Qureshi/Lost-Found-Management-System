@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { readItems, readSession, readUsers, writeItems, writeSession, writeUsers } from "@/lib/storage"
+import { addItem as fsAddItem, deleteItem as fsDeleteItem, listenToItems } from "@/lib/firestore-client"
 import type { Item, User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const skipWriteRef = useRef(false)
 
-  // Initialize from localStorage
+  // Initialize from localStorage and start Firestore realtime listener (if available)
   useEffect(() => {
     const u = readUsers()
     const it = readItems()
@@ -62,6 +63,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (sessionId) {
       const current = u.find((x) => x.id === sessionId) || null
       setUser(current)
+    }
+
+    // Start Firestore listener to keep items in sync across devices.
+    let unsub: any = null
+    try {
+      if (typeof window !== "undefined" && typeof listenToItems === "function") {
+        unsub = listenToItems((list) => {
+          // Update React state and persist to localStorage so app uses realtime data
+          setItems(list)
+          try {
+            writeItems(list)
+          } catch {}
+        })
+      }
+    } catch (err) {
+      // Listener errors are non-fatal; leave localStorage as source-of-truth
+      // eslint-disable-next-line no-console
+      console.error("Firestore listener error:", err)
+    }
+
+    return () => {
+      try {
+        if (typeof unsub === "function") unsub()
+      } catch {}
     }
   }, [])
 
@@ -194,19 +219,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast({ title: "Not authorized", description: "Please log in to add items", variant: "destructive" })
         return null
       }
-      const id = crypto.randomUUID()
       const now = new Date().toISOString()
-      const newItem: Item = {
-        ...data,
-        id,
-        ownerId: user.id,
-        resolved: false,
-        createdAt: now,
-        updatedAt: now,
+      // Attempt to write to Firestore first so other devices will see it
+      try {
+        const res = await fsAddItem({ ...data, ownerId: user.id, resolved: false, updatedAt: now })
+        const id = res?.id || crypto.randomUUID()
+        const optimistic: Item = {
+          ...data,
+          id,
+          ownerId: user.id,
+          resolved: false,
+          createdAt: now,
+          updatedAt: now,
+        }
+        setItems((prev) => [optimistic, ...prev])
+        toast({ title: "Item added", description: `${data.type === "lost" ? "Lost" : "Found"} item created and synced.` })
+        return id
+      } catch (err) {
+        // Firestore write failed — fall back to local-only storage
+        // eslint-disable-next-line no-console
+        console.error("Firestore add failed, falling back to local storage:", err)
+        const id = crypto.randomUUID()
+        const localItem: Item = {
+          ...data,
+          id,
+          ownerId: user.id,
+          resolved: false,
+          createdAt: now,
+          updatedAt: now,
+        }
+        setItems((prev) => [localItem, ...prev])
+        toast({ title: "Item added (local)", description: "Saved locally — will retry syncing later.", variant: "warning" })
+        return id
       }
-      setItems((prev) => [newItem, ...prev])
-      toast({ title: "Item added", description: `${data.type === "lost" ? "Lost" : "Found"} item created.` })
-      return id
     },
     [user, toast],
   )
@@ -239,7 +284,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         existed = next.length !== before
         return next
       })
-      if (existed) toast({ title: "Item deleted" })
+      if (existed) {
+        // Attempt to delete from Firestore as well (best-effort)
+        try {
+          await fsDeleteItem(id)
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("Firestore delete failed:", err)
+        }
+        toast({ title: "Item deleted" })
+      }
       return existed
     },
     [toast],

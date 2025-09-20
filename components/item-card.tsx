@@ -34,7 +34,7 @@ export function ItemCard({
           <CardTitle className="flex items-center justify-between text-pretty">
             <button
               type="button"
-              className="text-left hover:underline"
+              className="text-left hover:underline truncate max-w-full text-left"
               onClick={() => setOpen(true)}
               aria-label={`Open details for ${item.name}`}
             >
@@ -47,7 +47,7 @@ export function ItemCard({
         <CardContent className="flex flex-col gap-6">
           <button
             type="button"
-            className="relative h-40 w-full overflow-hidden rounded-md bg-muted"
+            className="relative w-full overflow-hidden rounded-md bg-muted h-40 md:h-56"
             onClick={() => setOpen(true)}
             aria-label="Open item details"
           >
@@ -64,7 +64,7 @@ export function ItemCard({
             )}
           </button>
           <p className="text-sm text-muted-foreground">{item.description}</p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div>
               <span className="font-medium">Location:</span> {item.location}
             </div>
@@ -83,7 +83,7 @@ export function ItemCard({
           </div>
         </CardContent>
 
-        <CardFooter className="flex items-center justify-between">
+        <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <Button
             variant={isFavorite ? "default" : "outline"}
             size="sm"
@@ -94,7 +94,7 @@ export function ItemCard({
             {isFavorite ? "Favorited" : "Favorite"}
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {showOwnerActions && isOwner && (
               <>
                 <Button size="sm" variant="outline" onClick={() => onEdit?.(item)}>
@@ -125,7 +125,7 @@ export function ItemCard({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="relative h-56 w-full overflow-hidden rounded-md bg-muted">
+            <div className="relative w-full overflow-hidden rounded-md bg-muted h-56 md:h-72">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.imageDataUrl || "/placeholder.svg?height=360&width=640&query=item details"}
