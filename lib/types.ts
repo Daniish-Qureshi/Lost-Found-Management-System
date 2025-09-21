@@ -24,4 +24,16 @@ export interface Item {
   resolved: boolean
   createdAt: string
   updatedAt: string
+  // Optional metadata
+  size?: string
+  color?: string
+  brand?: string
+  contactPhone?: string
+  poster?: {
+    name?: string
+    collegeId?: string
+    roll?: string
+    course?: string
+    year?: string
+  }
 }

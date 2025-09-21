@@ -9,6 +9,22 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useState } from "react"
 
+// small helper to display relative time
+function timeAgo(isoDateOrString?: string) {
+  if (!isoDateOrString) return "some time ago"
+  const then = new Date(isoDateOrString)
+  if (isNaN(then.getTime())) return "some time ago"
+  const diff = Date.now() - then.getTime()
+  const sec = Math.floor(diff / 1000)
+  const min = Math.floor(sec / 60)
+  const hrs = Math.floor(min / 60)
+  const days = Math.floor(hrs / 24)
+  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`
+  if (hrs > 0) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`
+  if (min > 0) return `${min} minute${min > 1 ? "s" : ""} ago`
+  return `${sec} second${sec > 1 ? "s" : ""} ago`
+}
+
 export function ItemCard({
   item,
   onEdit,
@@ -31,17 +47,33 @@ export function ItemCard({
     <Card className={cn(item.resolved && "opacity-80")}>
       <Dialog open={open} onOpenChange={setOpen}>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-pretty">
-            <button
-              type="button"
-              className="text-left hover:underline truncate max-w-full text-left"
-              onClick={() => setOpen(true)}
-              aria-label={`Open details for ${item.name}`}
-            >
-              {item.name}
-            </button>
-            <Badge variant="secondary">{item.category}</Badge>
-          </CardTitle>
+          <div className="flex items-start justify-between w-full gap-3">
+            <div className="flex-1 min-w-0">
+              <button
+                type="button"
+                className="hover:underline truncate max-w-full text-left text-base font-semibold"
+                onClick={() => setOpen(true)}
+                aria-label={`Open details for ${item.name}`}
+              >
+                {item.name}
+              </button>
+              <div className="mt-1 text-sm text-muted-foreground">
+                {/* Time since posted */}
+                {item.createdAt ? (
+                  <span>Posted {timeAgo(item.createdAt)}</span>
+                ) : (
+                  <span>Posted {item.date ? timeAgo(item.date) : "Recently"}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Status badge: Lost (red) / Found (green) */}
+              <Badge className={item.type === "lost" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+                {item.type === "lost" ? "Lost" : "Found"}
+              </Badge>
+              <Badge variant="secondary">{item.category}</Badge>
+            </div>
+          </div>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-6">
@@ -64,6 +96,28 @@ export function ItemCard({
             )}
           </button>
           <p className="text-sm text-muted-foreground">{item.description}</p>
+
+          {/* Optional condition/details: size, color, brand */}
+          {(item.size || item.color || item.brand) && (
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              {item.size && (
+                <div>
+                  <span className="font-medium">Size:</span> {item.size}
+                </div>
+              )}
+              {item.color && (
+                <div>
+                  <span className="font-medium">Color:</span> {item.color}
+                </div>
+              )}
+              {item.brand && (
+                <div>
+                  <span className="font-medium">Brand:</span> {item.brand}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div>
               <span className="font-medium">Location:</span> {item.location}
@@ -76,11 +130,30 @@ export function ItemCard({
             </div>
             <div>
               <span className="font-medium">Contact:</span>{" "}
-              <a className="text-primary hover:underline" href={`mailto:${item.contact}`}>
-                {item.contact}
-              </a>
+              <div className="flex flex-col">
+                {item.contact && (
+                  <a className="text-primary hover:underline break-words max-w-full" href={`mailto:${item.contact}`}>
+                    {item.contact}
+                  </a>
+                )}
+                {item.contactPhone && (
+                  <a className="text-primary hover:underline break-words max-w-full" href={`tel:${item.contactPhone}`}>
+                    {item.contactPhone}
+                  </a>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Poster / Posted by info (if present) */}
+          {item.poster && (
+            <div className="mt-2 rounded border p-2 text-sm">
+              <div className="font-medium">Posted by</div>
+              <div className="text-sm text-muted-foreground">{item.poster.name}</div>
+              <div className="text-xs text-muted-foreground">{item.poster.collegeId || item.poster.roll}</div>
+              <div className="text-xs text-muted-foreground">{item.poster.course} • {item.poster.year}</div>
+            </div>
+          )}
         </CardContent>
 
         <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -143,7 +216,7 @@ export function ItemCard({
               </div>
               <div className="col-span-2">
                 <span className="font-medium">Contact:</span>{" "}
-                <a className="text-primary hover:underline" href={`mailto:${item.contact}`}>
+                <a className="text-primary hover:underline break-words max-w-full" href={`mailto:${item.contact}`}>
                   {item.contact}
                 </a>
               </div>
