@@ -25,7 +25,7 @@ export default function LostPage() {
   const list = useMemo(
     () =>
       applyFilters(
-        items.filter((i) => i.type === "lost"),
+        items.filter((i) => i.type === "lost" && i.status === "approved"),
         filters,
       ),
     [items, filters],

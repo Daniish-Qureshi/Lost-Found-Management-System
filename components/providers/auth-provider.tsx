@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsub: any = null
     try {
       if (typeof window !== "undefined" && typeof listenToItems === "function") {
-        unsub = listenToItems((list) => {
+        unsub = listenToItems((list: Item[]) => {
           // Update React state and persist to localStorage so app uses realtime data
           setItems(list)
           try {

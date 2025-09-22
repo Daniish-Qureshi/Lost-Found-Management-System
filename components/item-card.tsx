@@ -44,7 +44,19 @@ export function ItemCard({
   const [open, setOpen] = useState(false)
 
   return (
-    <Card className={cn(item.resolved && "opacity-80")}>
+      <Card className={cn(item.resolved && "opacity-80 relative")}>
+        {/* status badge */}
+        <div className="absolute top-2 right-2">
+          {item.status === "approved" && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>
+          )}
+          {item.status === "rejected" && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
+          )}
+          {(!item.status || item.status === "pending") && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Pending</span>
+          )}
+        </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <CardHeader>
           <div className="flex items-start justify-between w-full gap-3">

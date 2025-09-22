@@ -26,7 +26,7 @@ export default function FoundPage() {
   const list = useMemo(
     () =>
       applyFilters(
-        items.filter((i) => i.type === "found"),
+        items.filter((i) => i.type === "found" && i.status === "approved"),
         filters,
       ),
     [items, filters],

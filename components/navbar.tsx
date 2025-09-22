@@ -61,6 +61,23 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
+            onClick={() => {
+              // simple client-side admin gate
+              const id = typeof window !== "undefined" ? window.prompt("Enter Admin ID:") : null
+              if (!id) return
+              const num = typeof window !== "undefined" ? window.prompt("Enter Admin Number:") : null
+              if (!num) return
+              if (id === "239521315088" && num === "092890852945") {
+                router.push("/admin")
+              } else {
+                if (typeof window !== "undefined") window.alert("Access denied: invalid admin credentials")
+              }
+            }}
+          >
+            Admin
+          </Button>
+          <Button
+            variant="ghost"
             size="icon"
             aria-label="Toggle dark mode"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

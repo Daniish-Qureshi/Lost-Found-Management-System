@@ -36,4 +36,6 @@ export interface Item {
     course?: string
     year?: string
   }
+  // moderation status
+  status?: "pending" | "approved" | "rejected"
 }
