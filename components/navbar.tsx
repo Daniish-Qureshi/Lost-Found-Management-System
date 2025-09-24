@@ -67,7 +67,7 @@ export function Navbar() {
               if (!id) return
               const num = typeof window !== "undefined" ? window.prompt("Enter Admin Number:") : null
               if (!num) return
-              if (id === "239521315088" && num === "092890852945") {
+              if (id === "0235BCA019" && num === "230812010158") {
                 router.push("/admin")
               } else {
                 if (typeof window !== "undefined") window.alert("Access denied: invalid admin credentials")

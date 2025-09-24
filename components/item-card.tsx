@@ -98,13 +98,13 @@ export function ItemCard({
             {item.imageDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={item.imageDataUrl || "/placeholder.svg?height=320&width=480&query=item"}
+                src={item.imageDataUrl || "/no-image.png"}
                 alt={item.name}
                 className="h-full w-full object-cover"
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src="/missing-image.png" alt="" className="h-full w-full object-cover" />
+              <img src="/no-image.png" alt="" className="h-full w-full object-cover" />
             )}
           </button>
           <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -213,7 +213,7 @@ export function ItemCard({
             <div className="relative w-full overflow-hidden rounded-md bg-muted h-56 md:h-72">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={item.imageDataUrl || "/placeholder.svg?height=360&width=640&query=item details"}
+                src={item.imageDataUrl || "/no-image.png"}
                 alt={item.name}
                 className="h-full w-full object-cover"
               />
