@@ -41,8 +41,15 @@ export async function POST(req: Request) {
         try {
           detail = await resp.text()
         } catch {}
-        // fall through to try SMTP fallback
+        // Log the EmailJS failure
         console.error("EmailJS send failed:", resp.status, detail)
+        // In development return the provider response so the client can show the error for debugging
+        if (process.env.NODE_ENV !== "production") {
+          return new Response(JSON.stringify({ error: "EmailJS send failed", status: resp.status, detail }), {
+            status: 502,
+            headers: { "content-type": "application/json" },
+          })
+        }
       } else {
         return new Response(JSON.stringify({ ok: true, via: "emailjs" }), {
           status: 200,
@@ -89,6 +96,19 @@ export async function POST(req: Request) {
           headers: { "content-type": "application/json" },
         })
       }
+    }
+
+    // If running locally (not production), simulate success so devs can test the contact form
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn("Contact API: email not configured — simulating send in development.")
+      // Log the message for debugging
+      // eslint-disable-next-line no-console
+      console.log({ name, email, message })
+      return new Response(JSON.stringify({ ok: true, via: "dev-simulated" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
     }
 
     return new Response(

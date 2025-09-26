@@ -10,9 +10,9 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">Helping students reunite with their belongings.</p>
           </div>
           <div className="flex gap-4">
-            {/* <Link className="text-sm text-muted-foreground hover:text-primary" href="/contact">
+            <Link className="text-sm text-muted-foreground hover:text-primary" href="/contact">
               Contact
-            </Link>*/}
+            </Link>
             
             <a
               className="text-sm text-muted-foreground hover:text-primary"
