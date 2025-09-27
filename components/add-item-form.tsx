@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { ItemType, Category, Item } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,7 @@ export function AddItemForm({
 
   const { addItem, updateItem } = useAuth()
   const { toast } = useToast()
+  const [similar, setSimilar] = useState<Item[]>([])
 
   function onFileChange(file?: File) {
     if (!file) return setImageDataUrl(undefined)
@@ -66,6 +67,22 @@ export function AddItemForm({
         toast({ title: "Item updated" })
       } else {
         const id = await addItem({ type, name, description, location, date, category, contact, imageDataUrl } as any)
+        if (id) {
+          // send notification to owner (in-app)
+          try {
+            const usersRaw = localStorage.getItem("lf_users")
+            if (usersRaw) {
+              const users = JSON.parse(usersRaw)
+              const owner = users.find((u: any) => u.id === (localStorage.getItem("lf_session")))
+              if (owner) {
+                const notes = owner.notifications || []
+                notes.push({ id: crypto.randomUUID(), title: "Post published", body: `Your item \"${name}\" was posted.`, createdAt: new Date().toISOString(), read: false })
+                owner.notifications = notes
+                localStorage.setItem("lf_users", JSON.stringify(users))
+              }
+            }
+          } catch {}
+        }
         if (!id) return
       }
       onSaved?.()
@@ -73,6 +90,26 @@ export function AddItemForm({
       setSaving(false)
     }
   }
+
+  // compute similar items when name or description change
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("lf_items")
+      if (!raw) return setSimilar([])
+      const items: Item[] = JSON.parse(raw)
+      const q = (name + " " + description).toLowerCase().split(/\s+/).filter(Boolean)
+      const matches = items
+        .filter((it) => {
+          const hay = (it.name + " " + (it.description || "")).toLowerCase()
+          // match any token
+          return q.some((t) => hay.includes(t))
+        })
+        .slice(0, 5)
+      setSimilar(matches)
+    } catch {
+      setSimilar([])
+    }
+  }, [name, description])
 
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
@@ -158,6 +195,19 @@ export function AddItemForm({
             alt="Preview"
             className="mt-2 h-40 w-full rounded-md object-cover"
           />
+        )}
+        {similar.length > 0 && (
+          <div className="mt-2 rounded border p-2">
+            <div className="text-sm font-medium">Similar items on the site</div>
+            <ul className="mt-2 text-sm">
+              {similar.map((s) => (
+                <li key={s.id} className="py-1">
+                  <div className="font-medium">{s.name}</div>
+                  <div className="text-xs text-muted-foreground">{s.location} • {s.type}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 

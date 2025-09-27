@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [editing, setEditing] = useState<string | null>(null)
   const [name, setName] = useState(user?.name || "")
   const [email, setEmail] = useState(user?.email || "")
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user?.avatarDataUrl)
   const [oldPass, setOldPass] = useState("")
   const [newPass, setNewPass] = useState("")
   const params = useSearchParams()
@@ -102,10 +103,45 @@ export default function DashboardPage() {
                       <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                     </div>
                     <div className="grid gap-2">
+                      <Label htmlFor="avatar">Profile Image</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-20 overflow-hidden rounded-full border">
+                          {avatarPreview ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={avatarPreview} alt="avatar preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">No image</div>
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <input
+                            id="avatar"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const f = e.target.files && e.target.files[0]
+                              if (!f) return
+                              const reader = new FileReader()
+                              reader.onload = () => {
+                                const dataUrl = reader.result as string
+                                setAvatarPreview(dataUrl)
+                              }
+                              reader.readAsDataURL(f)
+                            }}
+                          />
+                          <div className="text-sm text-muted-foreground">Max ~1MB recommended</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                     </div>
-                    <Button onClick={() => updateProfile({ name, email })}>Save</Button>
+                    <Button
+                      onClick={() => updateProfile({ name, email, avatarDataUrl: avatarPreview })}
+                    >
+                      Save
+                    </Button>
                   </div>
                 </div>
 

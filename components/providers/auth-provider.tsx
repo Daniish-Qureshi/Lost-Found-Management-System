@@ -16,7 +16,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
 
-  updateProfile: (data: { name?: string; email?: string }) => Promise<void>
+  updateProfile: (data: { name?: string; email?: string; avatarDataUrl?: string }) => Promise<void>
   changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>
   deleteAccount: () => Promise<void>
 
@@ -119,6 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         passwordHash,
         favorites: [],
+        strikes: 0,
+        blockedUntil: null,
+        isPermanentlyBlocked: false,
+        notifications: [],
         createdAt: new Date().toISOString(),
       }
       const next = [...users, newUser]
@@ -159,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router, toast])
 
   const updateProfile = useCallback(
-    async (data: { name?: string; email?: string }) => {
+    async (data: { name?: string; email?: string; avatarDataUrl?: string }) => {
       if (!user) return
       const updated: User = { ...user, ...data }
       const next = users.map((u) => (u.id === user.id ? updated : u))
@@ -219,6 +223,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast({ title: "Not authorized", description: "Please log in to add items", variant: "destructive" })
         return null
       }
+      // Enforce block/strike logic
+      const currentUser = users.find((u) => u.id === user.id)
+      if (currentUser?.isPermanentlyBlocked) {
+        toast({ title: "Account blocked", description: "Your account has been permanently blocked. Contact admin.", variant: "destructive" })
+        return null
+      }
+      if (currentUser?.blockedUntil) {
+        const until = new Date(currentUser.blockedUntil)
+        if (until > new Date()) {
+          toast({ title: "Account temporarily blocked", description: `Your account is blocked until ${until.toLocaleString()}` , variant: "destructive" })
+          return null
+        }
+      }
       const now = new Date().toISOString()
       // Attempt to write to Firestore first so other devices will see it
       try {
@@ -255,6 +272,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     [user, toast],
   )
+
+  // Admin helpers (client-side only)
+  const adminListUsers = useCallback(() => users, [users])
+
+  const adminModifyUser = useCallback((userId: string, changes: Partial<User>) => {
+    const next = users.map((u) => (u.id === userId ? { ...u, ...changes } : u))
+    setUsers(next)
+    return true
+  }, [users])
+
+  const adminDeleteUser = useCallback((userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId))
+    // remove session if deleting self
+    const sess = readSession()
+    if (sess === userId) writeSession(null)
+  }, [])
+
+  const addNotificationToUser = useCallback((userId: string, title: string, body?: string) => {
+    const note = { id: crypto.randomUUID(), title, body, createdAt: new Date().toISOString(), read: false }
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, notifications: [...(u.notifications || []), note] } : u)))
+  }, [])
 
   const updateItem = useCallback(
     async (id: string, data: Partial<Item>) => {

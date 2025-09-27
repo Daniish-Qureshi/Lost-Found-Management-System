@@ -7,6 +7,16 @@ export interface User {
   email: string
   passwordHash: string
   favorites: string[] // item ids
+  // Optional base64 data URL for avatar/profile image (stored in localStorage)
+  avatarDataUrl?: string
+  // Moderation fields
+  strikes?: number
+  // ISO string of date until the account is blocked (temporary block)
+  blockedUntil?: string | null
+  // When true, user is permanently blocked
+  isPermanentlyBlocked?: boolean
+  // Simple in-app notifications for the user (stored locally)
+  notifications?: { id: string; title: string; body?: string; createdAt: string; read?: boolean }[]
   createdAt: string
 }
 

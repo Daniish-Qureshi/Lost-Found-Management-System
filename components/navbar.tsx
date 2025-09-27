@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { Moon, Sun, Menu, LogOut, UserIcon } from "lucide-react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "next-themes"
 
 const navItems = [
   { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
   { href: "/lost", label: "Lost" },
   { href: "/found", label: "Found" },
   { href: "/dashboard", label: "Dashboard" },
@@ -95,7 +97,14 @@ export function Navbar() {
           ) : (
             <div className="hidden items-center gap-2 md:flex">
               <Button variant="outline" onClick={() => router.push("/dashboard")}>
-                <UserIcon className="mr-2 h-4 w-4" />
+                {user?.avatarDataUrl ? (
+                  <Avatar className="mr-2 h-5 w-5">
+                    <AvatarImage src={user.avatarDataUrl} alt={`${user.name}'s avatar`} />
+                    <AvatarFallback>{user.name ? user.name[0] : "U"}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <UserIcon className="mr-2 h-4 w-4" />
+                )}
                 Dashboard
               </Button>
               <Button variant="destructive" onClick={logout}>
@@ -148,7 +157,14 @@ export function Navbar() {
                         router.push("/dashboard")
                       }}
                     >
-                      <UserIcon className="mr-2 h-4 w-4" />
+                      {user?.avatarDataUrl ? (
+                        <Avatar className="mr-2 h-5 w-5">
+                          <AvatarImage src={user.avatarDataUrl} alt={`${user.name}'s avatar`} />
+                          <AvatarFallback>{user.name ? user.name[0] : "U"}</AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <UserIcon className="mr-2 h-4 w-4" />
+                      )}
                       Dashboard
                     </Button>
                     <Button
