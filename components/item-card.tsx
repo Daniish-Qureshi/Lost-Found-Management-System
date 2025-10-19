@@ -8,6 +8,8 @@ import { Heart, Pencil, Trash2, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import ChatDialog from "./chat-dialog"
 
 // small helper to display relative time
 function timeAgo(isoDateOrString?: string) {
@@ -42,6 +44,8 @@ export function ItemCard({
   const isFavorite = !!user?.favorites.includes(item.id)
   const isOwner = user?.id === item.ownerId
   const [open, setOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const router = useRouter()
 
   return (
       <Card className={cn(item.resolved && "opacity-80 relative")}>
@@ -199,6 +203,19 @@ export function ItemCard({
                 </Button>
               </>
             )}
+            {/* Chat button: visible to non-owners. If not logged in, route to login first. */}
+            {!isOwner && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (!user) return router.push("/login")
+                  setChatOpen(true)
+                }}
+              >
+                Chat
+              </Button>
+            )}
           </div>
         </CardFooter>
 
@@ -239,6 +256,11 @@ export function ItemCard({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Chat dialog — passes owner id so chatId is deterministic */}
+      {item.ownerId && (
+        <ChatDialog open={chatOpen} onOpenChange={setChatOpen} otherUserId={item.ownerId} otherUserName={item.poster?.name} itemId={item.id} itemName={item.name} />
+      )}
     </Card>
   )
 }

@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Items collection rules (preserve existing app semantics)
+    match /items/{itemId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Chats: only authenticated users can create/list chats they belong to
+    // chatId format: chat_{itemId}_{userA}_{userB} OR chat_{userA}_{userB}
+    match /chats/{chatId} {
+      allow read: if request.auth != null && (chatId.matches(".*_" + request.auth.uid) || chatId.matches(request.auth.uid + "_.*"));
+      allow create: if request.auth != null;
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if request.auth != null && (chatId.matches(".*_" + request.auth.uid) || chatId.matches(request.auth.uid + "_.*"));
+        allow create: if request.auth != null
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.itemId is string
+          && request.resource.data.itemName is string
+          && request.time == request.resource.data.timestamp;
+        // Prevent clients from updating or deleting messages (server-only)
+        allow update, delete: if false;
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
