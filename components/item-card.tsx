@@ -7,7 +7,7 @@ import { useAuth } from "./providers/auth-provider"
 import { Heart, Pencil, Trash2, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import ChatDialog from "./chat-dialog"
 
@@ -46,6 +46,15 @@ export function ItemCard({
   const [open, setOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const router = useRouter()
+  // Diagnostic: log render info so we can inspect in browser console on prod
+  // This helps determine if the component is rendered and whether `isOwner` / `user` differ in production
+  // (will show up in the browser console when this component mounts)
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line no-console
+      console.log("[ItemCard] render", { itemId: item.id, isOwner, userId: user?.id })
+    } catch {}
+  }, [])
 
   return (
       <Card className={cn(item.resolved && "opacity-80 relative")}>
@@ -208,6 +217,9 @@ export function ItemCard({
               <Button
                 size="sm"
                 variant="outline"
+                className="border-gray-200 bg-white text-gray-800"
+                data-test="chat-button"
+                aria-label="Open chat with owner"
                 onClick={() => {
                   if (!user) return router.push("/login")
                   setChatOpen(true)
