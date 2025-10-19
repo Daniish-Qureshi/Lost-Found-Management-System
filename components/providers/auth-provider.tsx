@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation"
 import { readItems, readSession, readUsers, writeItems, writeSession, writeUsers } from "@/lib/storage"
 import { addItem as fsAddItem, deleteItem as fsDeleteItem, listenToItems } from "@/lib/firestore-client"
+import { goOnline, goOffline } from "@/lib/presence"
 import type { Item, User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
@@ -63,6 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (sessionId) {
       const current = u.find((x) => x.id === sessionId) || null
       setUser(current)
+      try {
+        // set presence online for resumed session
+        if (current?.id) goOnline(current.id).catch(() => {})
+      } catch {}
     }
 
     // Start Firestore listener to keep items in sync across devices.
@@ -147,7 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast({ title: "Login failed", description: "Invalid credentials", variant: "destructive" })
         return false
       }
-      setUser(u)
+  setUser(u)
+  try { goOnline(u.id).catch(()=>{}) } catch {}
       writeSession(u.id)
       toast({ title: "Logged in", description: `Welcome back, ${u.name}` })
       return true
@@ -156,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const logout = useCallback(() => {
+    try { if (user?.id) goOffline(user.id).catch(()=>{}) } catch {}
     setUser(null)
     writeSession(null)
     toast({ title: "Logged out" })
@@ -266,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updatedAt: now,
         }
         setItems((prev) => [localItem, ...prev])
-        toast({ title: "Item added (local)", description: "Saved locally — will retry syncing later.", variant: "warning" })
+  toast({ title: "Item added (local)", description: "Saved locally — will retry syncing later.", variant: "default" })
         return id
       }
     },

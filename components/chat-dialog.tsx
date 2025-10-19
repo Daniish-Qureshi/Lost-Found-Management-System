@@ -7,11 +7,13 @@ import { useAuth } from "./providers/auth-provider"
 import { chatIdFor, listenToChatMessages, sendMessage } from "@/lib/firestore-client"
 import { clearNotificationForUserItem } from "@/lib/firestore-client"
 import { format } from "date-fns"
+import { listenToPresence } from "@/lib/presence"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserName, itemId, itemName }: { open: boolean; onOpenChange: (v: boolean) => void; otherUserId: string; otherUserName?: string; itemId?: string; itemName?: string }) {
   const { user } = useAuth()
   const { toast } = useToast()
+  const [otherPresent, setOtherPresent] = useState<{ state?: string; lastSeen?: string } | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [text, setText] = useState("")
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -38,6 +40,15 @@ export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserN
       } catch {}
     }
   }, [chatId])
+
+  // listen to other user's presence
+  useEffect(() => {
+    if (!otherUserId) return
+    const unsub = listenToPresence(otherUserId, (data: any) => {
+      setOtherPresent(data)
+    })
+    return () => unsub()
+  }, [otherUserId])
 
   // If the current user is the owner of the item, clear notifications for this item when opening the chat
   useEffect(() => {

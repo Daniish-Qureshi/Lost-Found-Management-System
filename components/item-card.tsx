@@ -47,7 +47,7 @@ export function ItemCard({
   const isOwner = user?.id === item.ownerId
   const [open, setOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
-  const [notif, setNotif] = useState<{ count?: number } | null>(null)
+  const [notif, setNotif] = useState<{ count?: number; senderId?: string; senderName?: string } | null>(null)
   const router = useRouter()
   // Diagnostic: log render info so we can inspect in browser console on prod
   // This helps determine if the component is rendered and whether `isOwner` / `user` differ in production
@@ -253,7 +253,16 @@ export function ItemCard({
               </Button>
             )}
             {isOwner && notif && (notif.count || 0) > 0 && (
-              <Button size="sm" variant="secondary" onClick={() => { setChatOpen(true); clearNotificationForUserItem(user!.id, item.id).catch(()=>{}) }} aria-label="Open messages">
+              <Button size="sm" variant="secondary" onClick={() => {
+                // open chat with latest sender who messaged about this item
+                if (notif.senderId) {
+                  // open chat with sender
+                  setChatOpen(true)
+                  // set otherUserId so ChatDialog knows whom to talk to
+                  // We'll pass it via opening the dialog (ChatDialog receives otherUserId prop)
+                }
+                clearNotificationForUserItem(user!.id, item.id).catch(()=>{})
+              }} aria-label="Open messages">
                 <Bell className="mr-2 h-4 w-4" />
                 {notif.count}
               </Button>
@@ -301,7 +310,14 @@ export function ItemCard({
 
       {/* Chat dialog — passes owner id so chatId is deterministic */}
       {item.ownerId && (
-        <ChatDialog open={chatOpen} onOpenChange={setChatOpen} otherUserId={item.ownerId} otherUserName={item.poster?.name} itemId={item.id} itemName={item.name} />
+        <ChatDialog
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          otherUserId={isOwner && notif?.senderId ? notif.senderId : item.ownerId}
+          otherUserName={isOwner && notif?.senderName ? notif.senderName : item.poster?.name}
+          itemId={item.id}
+          itemName={item.name}
+        />
       )}
     </Card>
   )
