@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "./providers/auth-provider"
 import { chatIdFor, listenToChatMessages, sendMessage } from "@/lib/firestore-client"
 import { format } from "date-fns"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserName, itemId, itemName }: { open: boolean; onOpenChange: (v: boolean) => void; otherUserId: string; otherUserName?: string; itemId?: string; itemName?: string }) {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [messages, setMessages] = useState<any[]>([])
   const [text, setText] = useState("")
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -52,6 +54,7 @@ export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserN
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("sendMessage failed", err)
+      toast({ title: "Message failed", description: "Could not send message — check console for details", variant: "destructive" })
     }
   }
 

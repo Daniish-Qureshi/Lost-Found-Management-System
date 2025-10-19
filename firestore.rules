@@ -22,7 +22,8 @@ service cloud.firestore {
           && request.resource.data.text is string
           && request.resource.data.itemId is string
           && request.resource.data.itemName is string
-          && request.time == request.resource.data.timestamp;
+          // timestamp should be a Firestore timestamp (serverTimestamp() will satisfy this)
+          && request.resource.data.timestamp is timestamp;
         // Prevent clients from updating or deleting messages (server-only)
         allow update, delete: if false;
       }
