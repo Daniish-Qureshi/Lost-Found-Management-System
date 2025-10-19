@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { useAuth } from "./providers/auth-provider"
 import { chatIdFor, listenToChatMessages, sendMessage } from "@/lib/firestore-client"
+import { clearNotificationForUserItem } from "@/lib/firestore-client"
 import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 
@@ -38,6 +39,17 @@ export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserN
     }
   }, [chatId])
 
+  // If the current user is the owner of the item, clear notifications for this item when opening the chat
+  useEffect(() => {
+    if (!open || !user || !itemId) return
+    try {
+      if (user.id) {
+        // clear notification for this user-item
+        clearNotificationForUserItem(user.id, itemId).catch((e) => {})
+      }
+    } catch (e) {}
+  }, [open, user, itemId])
+
   useEffect(() => {
     // scroll to bottom when messages change
     if (!scrollRef.current) return
@@ -49,7 +61,9 @@ export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserN
     if (!user) return
     if (!text.trim()) return
     try {
-      await sendMessage(chatId, user.id, text.trim(), { senderName: user.name, itemId: itemId || null, itemName: itemName || null })
+  // include recipientId so server increments recipient notification count
+  const recipientId = otherUserId
+  await sendMessage(chatId, user.id, text.trim(), { senderName: user.name, itemId: itemId || null, itemName: itemName || null, recipientId })
       setText("")
     } catch (err) {
       // eslint-disable-next-line no-console

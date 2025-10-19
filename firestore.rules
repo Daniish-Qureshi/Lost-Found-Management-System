@@ -30,6 +30,23 @@ service cloud.firestore {
     }
 
     // Default deny
+    // Notifications: per-user item notifications
+    match /notifications/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // top-level write restricted
+
+      match /items/{itemId} {
+        // allow sender to create or update notification for the recipient
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          // must include a numeric count and string lastMessage and timestamp updatedAt
+          && request.resource.data.count is number
+          && request.resource.data.lastMessage is string
+          && request.resource.data.updatedAt is timestamp;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

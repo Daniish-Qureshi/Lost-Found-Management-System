@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import ChatDialog from "./chat-dialog"
+import { listenToNotification, clearNotificationForUserItem } from "@/lib/firestore-client"
+import { Bell } from "lucide-react"
 
 // small helper to display relative time
 function timeAgo(isoDateOrString?: string) {
@@ -45,6 +47,7 @@ export function ItemCard({
   const isOwner = user?.id === item.ownerId
   const [open, setOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+  const [notif, setNotif] = useState<{ count?: number } | null>(null)
   const router = useRouter()
   // Diagnostic: log render info so we can inspect in browser console on prod
   // This helps determine if the component is rendered and whether `isOwner` / `user` differ in production
@@ -55,6 +58,27 @@ export function ItemCard({
       console.log("[ItemCard] render", { itemId: item.id, isOwner, userId: user?.id })
     } catch {}
   }, [])
+
+  // Start listening for notifications for the owner (if current user is owner)
+  useEffect(() => {
+    if (!user) return
+    let unsub: any = null
+    try {
+      if (user.id === item.ownerId) {
+        unsub = listenToNotification(user.id, item.id, (data: any) => {
+          setNotif(data)
+        })
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("notif listen error", e)
+    }
+    return () => {
+      try {
+        if (typeof unsub === "function") unsub()
+      } catch {}
+    }
+  }, [user, item.id, item.ownerId])
 
   return (
       <Card className={cn(item.resolved && "opacity-80 relative")}>
@@ -226,6 +250,12 @@ export function ItemCard({
                 }}
               >
                 Chat
+              </Button>
+            )}
+            {isOwner && notif && (notif.count || 0) > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => { setChatOpen(true); clearNotificationForUserItem(user!.id, item.id).catch(()=>{}) }} aria-label="Open messages">
+                <Bell className="mr-2 h-4 w-4" />
+                {notif.count}
               </Button>
             )}
           </div>
