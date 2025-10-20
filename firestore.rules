@@ -1,73 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Items collection rules (preserve existing app semantics)
     match /items/{itemId} {
       allow read: if true;
-      // Backwards-compatible: allow clients that don't use Firebase Auth to create items
-      // by validating the presence and types of required fields. For stronger security,
-      // integrate Firebase Authentication and require `request.auth != null` and
-      // `request.resource.data.ownerId == request.auth.uid`.
-      allow create: if (
-        // Authenticated clients must still match ownerId
-        (request.auth != null && request.resource.data.ownerId == request.auth.uid)
-        // OR unauthenticated clients are permitted when ownerId is provided as string
-        || (request.auth == null && request.resource.data.ownerId is string && request.resource.data.status is string)
-      );
-      // Updates/deletes must either be performed by the authenticated owner, or
-      // by clients that previously wrote the document (best-effort permissive rule).
-      allow update, delete: if (
-        (request.auth != null && resource.data.ownerId == request.auth.uid)
-        || (request.auth == null && resource.data.ownerId is string)
-      );
-    }
-
-    // Chats: only authenticated users can create/list chats they belong to
-    // chatId format: chat_{itemId}_{userA}_{userB} OR chat_{userA}_{userB}
-    match /chats/{chatId} {
-      // Allow reads for chat threads. In a secure production setup you'd restrict
-      // reads to participants by validating chatId and request.auth.
-      allow read: if true;
-      allow create: if true;
-
-      // Messages subcollection: validate message shape instead of requiring auth.
-      match /messages/{messageId} {
-        allow read: if true;
-        allow create: if (
-          request.resource.data.senderId is string
-          && request.resource.data.text is string
-          && request.resource.data.itemId is string
-          && request.resource.data.itemName is string
-          && request.resource.data.timestamp is timestamp
-        );
-        // Prevent clients from updating or deleting messages (server-only)
-        allow update, delete: if false;
-      }
-    }
-
-    // Default deny
-    // Notifications: per-user item notifications
-    match /notifications/{userId} {
-      // Allow reads for the user if authenticated; allow unauthenticated reads for
-      // compatibility (consider tightening in production).
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // top-level write restricted
-
-      match /items/{itemId} {
-        // Validate notification document shape rather than enforcing auth so the
-        // client can update counters even without Firebase Authentication.
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create, update: if (
-          request.resource.data.count is number
-          && request.resource.data.lastMessage is string
-          && request.resource.data.updatedAt is timestamp
-        );
-        allow delete: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
   }
 }

@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast()
   const router = useRouter()
   const skipWriteRef = useRef(false)
+  const anonAttemptedRef = useRef(false)
 
   // Initialize from localStorage and start Firestore realtime listener (if available)
   useEffect(() => {
@@ -77,11 +78,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const auth = getAuth()
       onAuthStateChanged(auth, (fbUser) => {
-        if (!fbUser) {
-          // silent anonymous sign-in
-          signInAnonymously(auth).catch((e) => {
+        if (!fbUser && !anonAttemptedRef.current) {
+          // silent anonymous sign-in (only try once to avoid noisy retries)
+          anonAttemptedRef.current = true
+          signInAnonymously(auth).catch((e: any) => {
             // eslint-disable-next-line no-console
-            console.error('Anonymous sign-in failed:', e)
+            console.error("Anonymous sign-in failed:", e)
+            // If auth is not configured in the Firebase project, give a helpful toast
+            try {
+              if (e?.code && typeof e.code === "string" && e.code.includes("configuration-not-found")) {
+                toast({ title: "Anonymous Auth not enabled", description: "Enable Anonymous sign-in in Firebase Console -> Authentication -> Sign-in method.", variant: "destructive" })
+              }
+            } catch {}
           })
         }
       })
