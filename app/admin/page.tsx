@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import type { Item, User } from "@/lib/types"
-import { readItems, listenToItems, updateItemStatus, deleteItem as fsDeleteItem } from "@/lib/firestore-client"
+import { readItems, listenToItems, updateItemStatus, deleteItem as fsDeleteItem, addItem as fsAddItem } from "@/lib/firestore-client"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/providers/auth-provider"
 
@@ -24,7 +24,20 @@ export default function AdminPanel() {
     }
     readItems()
       .then((list: any[]) => {
-        setItems(list)
+        // merge with localStorage items so admin sees locally-saved entries too
+        let merged = list || []
+        try {
+          const raw = localStorage.getItem("lf_items")
+          const local = raw ? (JSON.parse(raw) as Item[]) : []
+          // add any local items that are missing from Firestore (by id)
+          const ids = new Set(merged.map((i) => i.id))
+          for (const li of local) {
+            if (!ids.has(li.id)) merged = [li, ...merged]
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+        setItems(merged)
         setLoading(false)
       })
       .catch(() => {})
@@ -101,6 +114,37 @@ export default function AdminPanel() {
   const pending = items.filter((i) => (i.status || "pending") === "pending")
   const approved = items.filter((i) => i.status === "approved")
   const rejected = items.filter((i) => i.status === "rejected")
+
+  // compute local-only items for sync: items present in localStorage but not in Firestore
+  function localOnlyItems(): Item[] {
+    try {
+      const raw = localStorage.getItem("lf_items")
+      const local = raw ? (JSON.parse(raw) as Item[]) : []
+      const ids = new Set(items.map((i) => i.id))
+      return local.filter((li) => !ids.has(li.id))
+    } catch {
+      return []
+    }
+  }
+
+  async function handleSyncLocal() {
+    const missing = localOnlyItems()
+    if (missing.length === 0) return
+    if (!confirm(`Sync ${missing.length} local item(s) to Firestore?`)) return
+    for (const m of missing) {
+      try {
+        // call Firestore add; the server will create a new doc id — we keep local id in payload
+        await fsAddItem({ ...m, ownerId: m.ownerId, date: m.createdAt, status: m.status || "approved" })
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error("failed to sync item", m.id, e)
+      }
+    }
+    // refresh list after a short delay to allow listener to pick up changes
+    setTimeout(() => {
+      readItems().then((list: any[]) => setItems(list)).catch(() => {})
+    }, 1200)
+  }
 
   const isAdmin = true // simple gate; keep as-is for now
 

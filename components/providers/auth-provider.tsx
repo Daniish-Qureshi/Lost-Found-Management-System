@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation"
 import { readItems, readSession, readUsers, writeItems, writeSession, writeUsers } from "@/lib/storage"
 import { addItem as fsAddItem, deleteItem as fsDeleteItem, listenToItems } from "@/lib/firestore-client"
+import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth"
 import { goOnline, goOffline } from "@/lib/presence"
 import type { Item, User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
@@ -68,6 +69,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // set presence online for resumed session
         if (current?.id) goOnline(current.id).catch(() => {})
       } catch {}
+    }
+
+    // Ensure Firebase Auth has a signed-in user (anonymous fallback) so Firestore
+    // rules that require request.auth.uid succeed. We sign in anonymously if no
+    // auth state exists yet.
+    try {
+      const auth = getAuth()
+      onAuthStateChanged(auth, (fbUser) => {
+        if (!fbUser) {
+          // silent anonymous sign-in
+          signInAnonymously(auth).catch((e) => {
+            // eslint-disable-next-line no-console
+            console.error('Anonymous sign-in failed:', e)
+          })
+        }
+      })
+    } catch (e) {
+      // ignore if firebase/auth isn't configured in this environment
     }
 
     // Start Firestore listener to keep items in sync across devices.
@@ -259,10 +278,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setItems((prev) => [optimistic, ...prev])
         toast({ title: "Item added", description: `${data.type === "lost" ? "Lost" : "Found"} item created and synced.` })
         return id
-      } catch (err) {
+      } catch (err: any) {
         // Firestore write failed — fall back to local-only storage
+        // Log detailed error so we can diagnose permission / rules issues
         // eslint-disable-next-line no-console
         console.error("Firestore add failed, falling back to local storage:", err)
+        try {
+          // Helpful diagnostic: if Firestore returned a permission error, show a clearer message
+          const code = err?.code || err?.name || "unknown"
+          const msg = err?.message || String(err)
+          // eslint-disable-next-line no-console
+          console.error("Firestore error code:", code, "message:", msg)
+          if (typeof code === "string" && code.toLowerCase().includes("permission")) {
+            toast({ title: "Sync failed: permission denied", description: "Firestore returned 'Missing or insufficient permissions'. Check deployed security rules and project configuration.", variant: "destructive" })
+          }
+        } catch (e) {
+          // ignore diagnostics errors
+        }
         const id = crypto.randomUUID()
         const localItem: Item = {
           ...data,
@@ -273,7 +305,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updatedAt: now,
         }
         setItems((prev) => [localItem, ...prev])
-  toast({ title: "Item added (local)", description: "Saved locally — will retry syncing later.", variant: "default" })
+        // Show the existing 'local save' toast but include a hint to check console for details
+        toast({ title: "Item added (local)", description: "Saved locally — will retry syncing later. Check console for Firestore error details.", variant: "default" })
         return id
       }
     },
