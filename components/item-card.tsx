@@ -132,10 +132,10 @@ export function ItemCard({
             onClick={() => setOpen(true)}
             aria-label="Open item details"
           >
-            {item.imageDataUrl ? (
+            {item.imageUrl || item.imageDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={item.imageDataUrl || "/no-image.png"}
+                src={item.imageUrl || item.imageDataUrl || "/no-image.png"}
                 alt={item.name}
                 className="h-full w-full object-cover"
               />
@@ -281,7 +281,7 @@ export function ItemCard({
             <div className="relative w-full overflow-hidden rounded-md bg-muted h-56 md:h-72">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={item.imageDataUrl || "/no-image.png"}
+                src={item.imageUrl || item.imageDataUrl || "/no-image.png"}
                 alt={item.name}
                 className="h-full w-full object-cover"
               />

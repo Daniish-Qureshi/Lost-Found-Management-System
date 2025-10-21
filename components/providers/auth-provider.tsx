@@ -74,17 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Ensure Firebase Auth has a signed-in user (anonymous fallback) so Firestore
     // rules that require request.auth.uid succeed. We sign in anonymously if no
-    // auth state exists yet.
+    // auth state exists yet (try once).
     try {
       const auth = getAuth()
       onAuthStateChanged(auth, (fbUser) => {
         if (!fbUser && !anonAttemptedRef.current) {
-          // silent anonymous sign-in (only try once to avoid noisy retries)
           anonAttemptedRef.current = true
           signInAnonymously(auth).catch((e: any) => {
             // eslint-disable-next-line no-console
             console.error("Anonymous sign-in failed:", e)
-            // If auth is not configured in the Firebase project, give a helpful toast
             try {
               if (e?.code && typeof e.code === "string" && e.code.includes("configuration-not-found")) {
                 toast({ title: "Anonymous Auth not enabled", description: "Enable Anonymous sign-in in Firebase Console -> Authentication -> Sign-in method.", variant: "destructive" })
@@ -271,52 +269,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       const now = new Date().toISOString()
-      // Attempt to write to Firestore first so other devices will see it
-      try {
-        const res = await fsAddItem({ ...data, ownerId: user.id, resolved: false, updatedAt: now })
-        const id = res?.id || crypto.randomUUID()
-        const optimistic: Item = {
-          ...data,
-          id,
-          ownerId: user.id,
-          resolved: false,
-          createdAt: now,
-          updatedAt: now,
-        }
-        setItems((prev) => [optimistic, ...prev])
-        toast({ title: "Item added", description: `${data.type === "lost" ? "Lost" : "Found"} item created and synced.` })
-        return id
-      } catch (err: any) {
-        // Firestore write failed — fall back to local-only storage
-        // Log detailed error so we can diagnose permission / rules issues
-        // eslint-disable-next-line no-console
-        console.error("Firestore add failed, falling back to local storage:", err)
-        try {
-          // Helpful diagnostic: if Firestore returned a permission error, show a clearer message
-          const code = err?.code || err?.name || "unknown"
-          const msg = err?.message || String(err)
-          // eslint-disable-next-line no-console
-          console.error("Firestore error code:", code, "message:", msg)
-          if (typeof code === "string" && code.toLowerCase().includes("permission")) {
-            toast({ title: "Sync failed: permission denied", description: "Firestore returned 'Missing or insufficient permissions'. Check deployed security rules and project configuration.", variant: "destructive" })
-          }
-        } catch (e) {
-          // ignore diagnostics errors
-        }
-        const id = crypto.randomUUID()
-        const localItem: Item = {
-          ...data,
-          id,
-          ownerId: user.id,
-          resolved: false,
-          createdAt: now,
-          updatedAt: now,
-        }
-        setItems((prev) => [localItem, ...prev])
-        // Show the existing 'local save' toast but include a hint to check console for details
-        toast({ title: "Item added (local)", description: "Saved locally — will retry syncing later. Check console for Firestore error details.", variant: "default" })
-        return id
+      // Fast optimistic add: insert locally immediately and return id so UI is responsive.
+      const optimisticId = crypto.randomUUID()
+      const optimisticItem: Item & { imageUrl?: string } = {
+        ...(data as any),
+        id: optimisticId,
+        ownerId: user.id,
+        resolved: false,
+        createdAt: now,
+        updatedAt: now,
+        imageDataUrl: (data as any).imageDataUrl,
+        imageUrl: (data as any).imageDataUrl,
       }
+      setItems((prev) => [optimisticItem, ...prev])
+      // Notify quickly that the item was added locally and syncing
+      toast({ title: "Item added", description: `Your ${data.type === "lost" ? "lost" : "found"} item is being uploaded...`, variant: "default" })
+
+      // Perform the Firestore + Storage upload in background; do not block the caller.
+      ;(async () => {
+        try {
+          const res = await fsAddItem({ ...data, ownerId: user.id, resolved: false, updatedAt: now })
+          const remoteId = res?.id || optimisticId
+          // update the optimistic item with any returned fields (imageUrl, etc.) and remote id if different
+          // Update the optimistic item in a small, explicit block to avoid TS inference errors
+          setItems((prev) => {
+            const copy = [...(prev as any[])]
+            const idx = copy.findIndex((x) => x.id === optimisticId)
+            if (idx >= 0) {
+              const old = copy[idx] as any
+              const updated: Item = {
+                ...old,
+                id: remoteId,
+                imageUrl: (res as any)?.imageUrl || (old && (old as any).imageUrl),
+                imageDataUrl: (res as any)?.imageUrl || (old && (old as any).imageDataUrl),
+                updatedAt: new Date().toISOString(),
+              }
+              copy[idx] = updated
+            }
+            return copy
+          })
+          toast({ title: "Item uploaded", description: "Your item was uploaded and synced to the site.", variant: "default" })
+        } catch (err: any) {
+          // If upload fails, keep the optimistic item locally but notify the user and log error.
+          // eslint-disable-next-line no-console
+          console.error("Background upload failed:", err)
+          try {
+            const code = err?.code || err?.name || "unknown"
+            if (typeof code === "string" && code.toLowerCase().includes("permission")) {
+              toast({ title: "Sync failed: permission denied", description: "Firestore returned 'Missing or insufficient permissions'. Check deployed security rules and project configuration.", variant: "destructive" })
+            } else {
+              toast({ title: "Upload failed", description: "Your item was saved locally but upload failed. Check console for details.", variant: "destructive" })
+            }
+          } catch {}
+        }
+      })()
+
+      return optimisticId
     },
     [user, toast],
   )

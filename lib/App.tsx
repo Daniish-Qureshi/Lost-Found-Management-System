@@ -23,7 +23,8 @@ export default function App() {
 
   const handleAdd = async () => {
     if (!name.trim()) return alert("Enter item name")
-    await addItem({ name, type, location, date })
+    // trigger background upload and clear form immediately for fast UX
+    addItem({ name, type, location, date }).catch((e) => console.error("background add failed", e))
     setName(""); setLocation(""); setDate(""); setType("lost")
   }
 

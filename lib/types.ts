@@ -31,6 +31,8 @@ export interface Item {
   category: Category
   contact: string // email or phone
   imageDataUrl?: string
+  // Optional hosted image URL (uploaded to Firebase Storage)
+  imageUrl?: string
   resolved: boolean
   createdAt: string
   updatedAt: string

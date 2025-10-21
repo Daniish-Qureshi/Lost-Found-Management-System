@@ -14,14 +14,14 @@ export default function FirestoreAdmin() {
   const [location, setLocation] = useState("")
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [delId, setDelId] = useState("")
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState<any[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
-    let unsub = null
+    let unsub: (() => void) | null = null
     try {
-      unsub = listenToItems((list) => setItems(list))
-    } catch (err) {
+      unsub = listenToItems((list: any[]) => setItems(list))
+    } catch (err: any) {
       console.error(err)
     }
     // initial read as fallback
@@ -31,29 +31,34 @@ export default function FirestoreAdmin() {
     }
   }, [])
 
-  async function handleAdd(e) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     try {
-      await addItem({ name, type, location, date })
+      // Background add for quick admin UX
+      addItem({ name, type, location, date }).then(() => {
+        toast({ title: "Item added" })
+      }).catch((err: any) => {
+        console.error(err)
+        toast({ title: "Add failed", description: (err && err.message) || String(err), variant: "destructive" })
+      })
       setName("")
       setLocation("")
       setDate(new Date().toISOString().slice(0, 10))
-      toast({ title: "Item added" })
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast({ title: "Add failed", description: err?.message || String(err), variant: "destructive" })
+      toast({ title: "Add failed", description: (err && err.message) || String(err), variant: "destructive" })
     }
   }
 
-  async function handleDelete(e) {
+  async function handleDelete(e: React.FormEvent) {
     e.preventDefault()
     try {
       await deleteItem(delId)
       setDelId("")
       toast({ title: "Item deleted" })
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast({ title: "Delete failed", description: err?.message || String(err), variant: "destructive" })
+      toast({ title: "Delete failed", description: (err && err.message) || String(err), variant: "destructive" })
     }
   }
 

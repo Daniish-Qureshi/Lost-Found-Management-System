@@ -20,7 +20,7 @@ export default function ChatDialog({ open, onOpenChange, otherUserId, otherUserN
   const chatId = useMemo(() => {
     try {
       if (!user) return null
-      return chatIdFor(user.id, otherUserId, itemId)
+      return chatIdFor(itemId, user.id, otherUserId)
     } catch (e) {
       return null
     }

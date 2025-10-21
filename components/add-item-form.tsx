@@ -12,8 +12,17 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { useAuth } from "./providers/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
-const categories: Category[] = ["Electronics", "Books", "ID Cards", "Clothing", "Bags & Backpacks", "Accessories", "Stationery", "Sports Equipment", "Others"]
-
+const categories: Category[] = [
+  "Electronics",
+  "Books",
+  "ID Cards",
+  "Clothing",
+  "Bags & Backpacks",
+  "Accessories",
+  "Stationery",
+  "Sports Equipment",
+  "Others",
+]
 
 export function AddItemForm({
   initial,
@@ -66,14 +75,16 @@ export function AddItemForm({
         })
         toast({ title: "Item updated" })
       } else {
-        const id = await addItem({ type, name, description, location, date, category, contact, imageDataUrl } as any)
-        if (id) {
-          // send notification to owner (in-app)
+        // Fire-and-forget add for fast UX. addItem does the background upload and
+        // updates optimistic item in-place when complete.
+        const p = addItem({ type, name, description, location, date, category, contact, imageDataUrl } as any)
+        p?.then(() => {
+          // optionally: add a small in-app notification to localStorage for owner
           try {
             const usersRaw = localStorage.getItem("lf_users")
             if (usersRaw) {
               const users = JSON.parse(usersRaw)
-              const owner = users.find((u: any) => u.id === (localStorage.getItem("lf_session")))
+              const owner = users.find((u: any) => u.id === localStorage.getItem("lf_session"))
               if (owner) {
                 const notes = owner.notifications || []
                 notes.push({ id: crypto.randomUUID(), title: "Post published", body: `Your item \"${name}\" was posted.`, createdAt: new Date().toISOString(), read: false })
@@ -82,16 +93,21 @@ export function AddItemForm({
               }
             }
           } catch {}
-        }
-        if (!id) return
+        }).catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error("Background add failed:", err)
+        })
+
+        // Immediately call onSaved so parent can close the form — UX is fast because
+        // optimistic item already appears in the list.
+        onSaved?.()
       }
-      onSaved?.()
     } finally {
       setSaving(false)
     }
   }
 
-  // compute similar items when name or description change
+  // compute similar items when name or description change (reads local cache)
   useEffect(() => {
     try {
       const raw = localStorage.getItem("lf_items")
@@ -101,7 +117,6 @@ export function AddItemForm({
       const matches = items
         .filter((it) => {
           const hay = (it.name + " " + (it.description || "")).toLowerCase()
-          // match any token
           return q.some((t) => hay.includes(t))
         })
         .slice(0, 5)
