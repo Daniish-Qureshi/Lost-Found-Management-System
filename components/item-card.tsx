@@ -132,12 +132,21 @@ export function ItemCard({
             onClick={() => setOpen(true)}
             aria-label="Open item details"
           >
-            {item.imageUrl || item.imageDataUrl ? (
+              {item.imageUrl || item.imageDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.imageUrl || item.imageDataUrl || "/no-image.png"}
                 alt={item.name}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  try {
+                    // show placeholder on load failure and log url
+                    const src = (e.currentTarget && (e.currentTarget as HTMLImageElement).src) || "unknown"
+                    // eslint-disable-next-line no-console
+                    console.warn("[ItemCard] image failed to load:", src, "for item", item.id)
+                    e.currentTarget.src = "/no-image.png"
+                  } catch {}
+                }}
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
@@ -284,6 +293,14 @@ export function ItemCard({
                 src={item.imageUrl || item.imageDataUrl || "/no-image.png"}
                 alt={item.name}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  try {
+                    const src = (e.currentTarget && (e.currentTarget as HTMLImageElement).src) || "unknown"
+                    // eslint-disable-next-line no-console
+                    console.warn("[ItemCard][dialog] image failed to load:", src, "for item", item.id)
+                    e.currentTarget.src = "/no-image.png"
+                  } catch {}
+                }}
               />
             </div>
             <p className="text-sm text-muted-foreground">{item.description}</p>

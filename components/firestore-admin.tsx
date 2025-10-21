@@ -109,7 +109,14 @@ export default function FirestoreAdmin() {
           <div key={it.id} className="rounded border p-2 flex items-center gap-3">
             <div className="w-16 h-12 overflow-hidden rounded-md bg-muted">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={it.imageUrl || it.imageDataUrl || "/no-image.png"} alt={it.name} className="w-full h-full object-cover" />
+              <img src={it.imageUrl || it.imageDataUrl || "/no-image.png"} alt={it.name} className="w-full h-full object-cover" onError={(e) => {
+                try {
+                  const src = (e.currentTarget && (e.currentTarget as HTMLImageElement).src) || "unknown"
+                  // eslint-disable-next-line no-console
+                  console.warn("[AdminRealtime] image failed to load:", src, "for item", it.id)
+                  e.currentTarget.src = "/no-image.png"
+                } catch {}
+              }} />
             </div>
             <div className="flex-1">
               <div className="text-sm"><strong>{it.name}</strong> — {it.type} — {it.location} — {it.date}</div>
