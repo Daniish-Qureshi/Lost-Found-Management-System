@@ -21,11 +21,13 @@ function applyFilters(items: Item[], f: SearchFilters) {
 
 export default function LostPage() {
   const { items } = useAuth()
+  try { console.info("[lost] total items from provider", items.length) } catch {}
   const [filters, setFilters] = useState<SearchFilters>({ q: "", category: "All", location: "" })
   const list = useMemo(
     () =>
       applyFilters(
-        items.filter((i) => i.type === "lost" && i.status === "approved"),
+        // Accept legacy 'active' status as approved so existing posts are visible.
+        items.filter((i) => i.type === "lost" && (i.status === "approved" || i.status === "active")),
         filters,
       ),
     [items, filters],

@@ -297,13 +297,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const idx = copy.findIndex((x) => x.id === optimisticId)
             if (idx >= 0) {
               const old = copy[idx] as any
+              // When the background upload returns, prefer the returned imageUrl and
+              // remove the large inline imageDataUrl to keep localStorage and Firestore small.
+              const returnedImageUrl = (res as any)?.imageUrl || (old && (old as any).imageUrl)
               const updated: Item = {
                 ...old,
                 id: remoteId,
-                imageUrl: (res as any)?.imageUrl || (old && (old as any).imageUrl),
-                imageDataUrl: (res as any)?.imageUrl || (old && (old as any).imageDataUrl),
+                imageUrl: returnedImageUrl,
+                // remove inline data URL after upload
+                imageDataUrl: undefined,
                 updatedAt: new Date().toISOString(),
               }
+              // delete undefined fields to avoid persisting them in localStorage
+              try { delete (updated as any).imageDataUrl } catch {}
               copy[idx] = updated
             }
             return copy

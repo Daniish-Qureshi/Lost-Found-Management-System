@@ -30,7 +30,10 @@ function tabToParam(tab: TabVal): string {
 export default function DashboardPage() {
   const { user, items, updateItem, deleteItem, toggleResolved, updateProfile, changePassword, deleteAccount } =
     useAuth()
+
+  // My items belong to the current user's `id` (not `uid`) in the app's user model
   const myItems = useMemo(() => items.filter((i) => i.ownerId === user?.id), [items, user?.id])
+
   const [editing, setEditing] = useState<string | null>(null)
   const [name, setName] = useState(user?.name || "")
   const [email, setEmail] = useState(user?.email || "")
@@ -61,6 +64,7 @@ export default function DashboardPage() {
               <TabsTrigger value="profile">Profile</TabsTrigger>
             </TabsList>
 
+            {/* My Items Tab */}
             <TabsContent value="my" className="mt-6">
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {myItems.length === 0 && <p className="text-sm text-muted-foreground">No items yet.</p>}
@@ -87,12 +91,14 @@ export default function DashboardPage() {
               </div>
             </TabsContent>
 
+            {/* Add Item Tab */}
             <TabsContent value="add" className="mt-6">
               <div className="mx-auto max-w-2xl rounded-lg border p-4">
                 <AddItemForm />
               </div>
             </TabsContent>
 
+            {/* Profile Tab */}
             <TabsContent value="profile" className="mt-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="rounded-lg border p-4">
@@ -107,7 +113,6 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-20 h-20 overflow-hidden rounded-full border">
                           {avatarPreview ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={avatarPreview} alt="avatar preview" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full bg-muted flex items-center justify-center">No image</div>
@@ -122,10 +127,7 @@ export default function DashboardPage() {
                               const f = e.target.files && e.target.files[0]
                               if (!f) return
                               const reader = new FileReader()
-                              reader.onload = () => {
-                                const dataUrl = reader.result as string
-                                setAvatarPreview(dataUrl)
-                              }
+                              reader.onload = () => setAvatarPreview(reader.result as string)
                               reader.readAsDataURL(f)
                             }}
                           />
@@ -137,9 +139,7 @@ export default function DashboardPage() {
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                     </div>
-                    <Button
-                      onClick={() => updateProfile({ name, email, avatarDataUrl: avatarPreview })}
-                    >
+                    <Button onClick={() => updateProfile({ name, email, avatarDataUrl: avatarPreview })}>
                       Save
                     </Button>
                   </div>
@@ -156,11 +156,7 @@ export default function DashboardPage() {
                       <Label htmlFor="new">New Password</Label>
                       <Input id="new" type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} />
                     </div>
-                    <Button
-                      onClick={() => {
-                        if (oldPass && newPass) changePassword(oldPass, newPass)
-                      }}
-                    >
+                    <Button onClick={() => oldPass && newPass && changePassword(oldPass, newPass)}>
                       Update Password
                     </Button>
                   </div>

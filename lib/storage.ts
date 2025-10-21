@@ -18,7 +18,11 @@ export function readUsers(): User[] {
 
 export function writeUsers(users: User[]) {
   if (typeof window === "undefined") return
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users))
+  } catch {
+    // ignore localStorage write failures (quota/permissions)
+  }
 }
 
 export function readItems(): Item[] {
@@ -33,7 +37,11 @@ export function readItems(): Item[] {
 
 export function writeItems(items: Item[]) {
   if (typeof window === "undefined") return
-  localStorage.setItem(ITEMS_KEY, JSON.stringify(items))
+  try {
+    localStorage.setItem(ITEMS_KEY, JSON.stringify(items))
+  } catch {
+    // ignore localStorage write failures
+  }
 }
 
 export function readSession(): string | null {
@@ -43,6 +51,10 @@ export function readSession(): string | null {
 
 export function writeSession(userId: string | null) {
   if (typeof window === "undefined") return
-  if (userId) localStorage.setItem(SESSION_KEY, userId)
-  else localStorage.removeItem(SESSION_KEY)
+  try {
+    if (userId) localStorage.setItem(SESSION_KEY, userId)
+    else localStorage.removeItem(SESSION_KEY)
+  } catch {
+    // ignore
+  }
 }

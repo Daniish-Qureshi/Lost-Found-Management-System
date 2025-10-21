@@ -1,11 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // helper: return true if requesting user is an admin doc in /admins/{uid}
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // Items: public read, writes only by authenticated owner
     match /items/{itemId} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      // owner or admin can update/delete
+      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
     // Chats: authenticated users may create/read chat threads and messages

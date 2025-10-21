@@ -106,9 +106,15 @@ export default function FirestoreAdmin() {
       <div className="space-y-2 max-h-72 overflow-auto">
         {items.length === 0 && <p className="text-sm text-muted-foreground">No items</p>}
         {items.map((it) => (
-          <div key={it.id} className="rounded border p-2">
-            <div className="text-sm"><strong>{it.name}</strong> — {it.type} — {it.location} — {it.date}</div>
-            <div className="text-xs text-muted-foreground">ID: {it.id}</div>
+          <div key={it.id} className="rounded border p-2 flex items-center gap-3">
+            <div className="w-16 h-12 overflow-hidden rounded-md bg-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={it.imageUrl || it.imageDataUrl || "/no-image.png"} alt={it.name} className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm"><strong>{it.name}</strong> — {it.type} — {it.location} — {it.date}</div>
+              <div className="text-xs text-muted-foreground">ID: {it.id}</div>
+            </div>
           </div>
         ))}
       </div>

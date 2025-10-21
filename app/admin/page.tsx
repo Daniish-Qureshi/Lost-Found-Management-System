@@ -24,6 +24,7 @@ export default function AdminPanel() {
     }
     readItems()
       .then((list: any[]) => {
+        try { console.info("[admin] readItems returned", (list || []).length) } catch {}
         // merge with localStorage items so admin sees locally-saved entries too
         let merged = list || []
         try {
@@ -38,6 +39,7 @@ export default function AdminPanel() {
           // ignore parse errors
         }
         setItems(merged)
+        try { console.info("[admin] merged items length", merged.length) } catch {}
         setLoading(false)
       })
       .catch(() => {})
@@ -112,7 +114,7 @@ export default function AdminPanel() {
   }
 
   const pending = items.filter((i) => (i.status || "pending") === "pending")
-  const approved = items.filter((i) => i.status === "approved")
+  const approved = items.filter((i) => (i.status === "approved" || i.status === "active"))
   const rejected = items.filter((i) => i.status === "rejected")
 
   // compute local-only items for sync: items present in localStorage but not in Firestore
@@ -158,9 +160,15 @@ export default function AdminPanel() {
         {pending.map((it) => (
           <div key={it.id} className="my-2 rounded border p-3">
             <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium">{it.name}</div>
-                <div className="text-xs text-muted-foreground">{it.type} • {it.location}</div>
+              <div className="flex items-center gap-3">
+                <div className="w-20 h-14 overflow-hidden rounded-md bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageUrl || it.imageDataUrl || "/no-image.png"} alt={it.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="font-medium">{it.name}</div>
+                  <div className="text-xs text-muted-foreground">{it.type} • {it.location}</div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => handleStatus(it.id, "approved")}>Approve</Button>
@@ -197,9 +205,15 @@ export default function AdminPanel() {
         {approved.map((it) => (
           <div key={it.id} className="my-2 rounded border p-3">
             <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium">{it.name}</div>
-                <div className="text-xs text-muted-foreground">{it.type} • {it.location}</div>
+              <div className="flex items-center gap-3">
+                <div className="w-20 h-14 overflow-hidden rounded-md bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageUrl || it.imageDataUrl || "/no-image.png"} alt={it.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="font-medium">{it.name}</div>
+                  <div className="text-xs text-muted-foreground">{it.type} • {it.location}</div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="destructive" onClick={() => handleStatus(it.id, "rejected")}>Reject</Button>
@@ -215,9 +229,15 @@ export default function AdminPanel() {
         {rejected.map((it) => (
           <div key={it.id} className="my-2 rounded border p-3">
             <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium">{it.name}</div>
-                <div className="text-xs text-muted-foreground">{it.type} • {it.location}</div>
+              <div className="flex items-center gap-3">
+                <div className="w-20 h-14 overflow-hidden rounded-md bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageUrl || it.imageDataUrl || "/no-image.png"} alt={it.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="font-medium">{it.name}</div>
+                  <div className="text-xs text-muted-foreground">{it.type} • {it.location}</div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => handleStatus(it.id, "approved")}>Approve</Button>
